@@ -1,49 +1,66 @@
+import java.io.*;
 import java.util.*;
 
-class Reservation {
-    private String guestName;
-    private String roomType;
+class RoomInventory {
+    private Map<String, Integer> rooms = new HashMap<>();
 
-    public Reservation(String guestName, String roomType) {
-        this.guestName = guestName;
-        this.roomType = roomType;
+    public RoomInventory() {
+        rooms.put("Single", 5);
+        rooms.put("Double", 3);
+        rooms.put("Suite", 2);
     }
 
-    public String getGuestName() {
-        return guestName;
+    public Map<String, Integer> getAll() {
+        return rooms;
     }
 
-    public String getRoomType() {
-        return roomType;
-    }
-}
-
-class BookingHistory {
-    private List<Reservation> confirmedReservations;
-
-    public BookingHistory() {
-        confirmedReservations = new ArrayList<>();
-    }
-
-    public void addReservation(Reservation reservation) {
-        confirmedReservations.add(reservation);
-    }
-
-    public List<Reservation> getConfirmedReservations() {
-        return confirmedReservations;
+    public void setRoom(String type, int count) {
+        rooms.put(type, count);
     }
 }
 
-class BookingReportService {
-    public void generateReport(BookingHistory history) {
-        System.out.println("\nBooking History Report");
-        for (Reservation r : history.getConfirmedReservations()) {
-            System.out.println(
-                    "Guest: " +
-                            r.getGuestName() +
-                            ", Room Type: " +
-                            r.getRoomType()
-            );
+class FilePersistenceService {
+
+    public void saveInventory(RoomInventory inventory, String filePath) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Map.Entry<String, Integer> entry : inventory.getAll().entrySet()) {
+                writer.write(entry.getKey() + "=" + entry.getValue());
+                writer.newLine();
+            }
+            System.out.println("Inventory saved successfully.");
+        } catch (IOException e) {
+            System.out.println("Error saving inventory.");
+        }
+    }
+
+    public void loadInventory(RoomInventory inventory, String filePath) {
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            System.out.println("No valid inventory data found. Starting fresh.");
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            boolean valid = false;
+
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("=");
+                if (parts.length == 2) {
+                    String type = parts[0];
+                    int count = Integer.parseInt(parts[1]);
+                    inventory.setRoom(type, count);
+                    valid = true;
+                }
+            }
+
+            if (!valid) {
+                System.out.println("No valid inventory data found. Starting fresh.");
+            }
+
+        } catch (Exception e) {
+            System.out.println("No valid inventory data found. Starting fresh.");
         }
     }
 }
@@ -51,15 +68,20 @@ class BookingReportService {
 public class BookMyStayApp {
     public static void main(String[] args) {
 
-        System.out.println("Booking History and Reporting");
+        System.out.println("System Recovery");
 
-        BookingHistory history = new BookingHistory();
-        BookingReportService reportService = new BookingReportService();
+        String filePath = "inventory.txt";
 
-        history.addReservation(new Reservation("Abhi", "Single"));
-        history.addReservation(new Reservation("Subha", "Double"));
-        history.addReservation(new Reservation("Vanmathi", "Suite"));
+        RoomInventory inventory = new RoomInventory();
+        FilePersistenceService service = new FilePersistenceService();
 
-        reportService.generateReport(history);
+        service.loadInventory(inventory, filePath);
+
+        System.out.println("\nCurrent Inventory:");
+        for (Map.Entry<String, Integer> entry : inventory.getAll().entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        }
+
+        service.saveInventory(inventory, filePath);
     }
 }
